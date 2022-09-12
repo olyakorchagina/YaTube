@@ -91,7 +91,7 @@ class PostURLTests(TestCase):
         response = self.authorized_client.get(post_edit_page, follow=True)
         self.assertRedirects(response, post_detail_page)
 
-    # Проверка редиректа авторизованного пользователя 
+    # Проверка редиректа авторизованного пользователя
     # после отправки комментария на страницу информации о посте
     def test_add_comment_url_redirects_authorized_client_on_post_detail(self):
         """Успешная отправка комментария перенаправит

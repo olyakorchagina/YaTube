@@ -7,6 +7,7 @@ from posts.models import Follow, Group, Post, User
 
 POSTS_ON_PAGE = 10
 
+
 def index(request):
     post_list = Post.objects.select_related('group', 'author')
     paginator = Paginator(post_list, POSTS_ON_PAGE)
@@ -115,7 +116,7 @@ def add_comment(request, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
-    return redirect('posts:post_detail', post_id=post_id) 
+    return redirect('posts:post_detail', post_id=post_id)
 
 
 @login_required
@@ -128,6 +129,7 @@ def follow_index(request):
         'page_obj': page_obj,
     }
     return render(request, 'posts/follow.html', context)
+
 
 @login_required
 def profile_follow(request, username):

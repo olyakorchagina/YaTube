@@ -110,7 +110,7 @@ class PostPagesTests(TestCase):
             reverse(
                 'posts:follow_index'):
                     'posts/follow.html',
-            
+
         }
         for url, template in templates_url_names.items():
             with self.subTest(url=url):
@@ -161,7 +161,7 @@ class PostPagesTests(TestCase):
         response = self.post_author.get(
             reverse('posts:post_detail', kwargs={'post_id': self.post.id})
         )
-        post = response.context.get('post') 
+        post = response.context.get('post')
         self.assertIsNotNone(post)
         self.assertEqual(
             response.context['post'].group, self.group
@@ -223,7 +223,7 @@ class PostPagesTests(TestCase):
         page_obj = response.context.get('page_obj')
         self.assertNotIn(self.post, page_obj.object_list)
 
-    # Проверка: при удалении записи из базы, она остаётся в response.content 
+    # Проверка: при удалении записи из базы, она остаётся в response.content
     # главной страницы до принудительной очистки кэша
     def test_index_caches(self):
         """Тестирование кэша главной страницы."""
@@ -245,7 +245,7 @@ class PostPagesTests(TestCase):
         )
         self.assertNotEqual(response_2.content, response_3.content)
 
-    # Проверка: новая запись пользователя появляется в ленте тех, 
+    # Проверка: новая запись пользователя появляется в ленте тех,
     # кто на него подписан.
     def test_following_posts(self):
         """Тестирование появления поста автора в ленте подписчика."""
@@ -264,7 +264,7 @@ class PostPagesTests(TestCase):
         page_context = response.context
         self.post_exists(page_context)
 
-    # Проверка: новая запись пользователя не появляется в ленте тех, 
+    # Проверка: новая запись пользователя не появляется в ленте тех,
     # кто на него не подписан.
     def test_unfollowing_posts(self):
         """Тестирование отсутствия поста автора у нового пользователя."""

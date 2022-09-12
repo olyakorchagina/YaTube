@@ -55,21 +55,21 @@ class PostURLTests(TestCase):
     def test_add_comment_exists_at_desired_location(self):
         """Комментирование записи доступно авторизованному пользователю."""
         add_comment_page = f'/posts/{self.post.id}/comment/'
-        response = self.authorized_client.get(add_comment_page) 
+        response = self.authorized_client.get(add_comment_page)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
     # Тестирование подписки для авторизованного пользователя
     def test_follow_exists_at_desired_location(self):
         """Подписка доступна авторизованному пользователю."""
         follow_page = f'/profile/{self.user}/follow/'
-        response = self.authorized_client.get(follow_page) 
+        response = self.authorized_client.get(follow_page)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
-    
+
     # Тестирование отписки для авторизованного пользователя
     def test_unfollow_exists_at_desired_location(self):
         """Отписка доступна авторизованному пользователю."""
         unfollow_page = f'/profile/{self.user}/unfollow/'
-        response = self.authorized_client.get(unfollow_page) 
+        response = self.authorized_client.get(unfollow_page)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
     # Тестирование страницы Редактирования поста для автора
@@ -84,15 +84,15 @@ class PostURLTests(TestCase):
     def test_post_edit_url_redirects_authorized_client_on_post_detail(self):
         """Страница редактирования поста перенаправит
         авторизованного пользователя на подробную информацию о посте,
-        если тот не является его автором
+        если тот не является его автором.
         """
         post_edit_page = f'/posts/{self.post.id}/edit/'
         post_detail_page = f'/posts/{self.post.id}/'
         response = self.authorized_client.get(post_edit_page, follow=True)
         self.assertRedirects(response, post_detail_page)
 
-    # Проверка редиректа авторизованного пользователя после отправки комментария
-    # на страницу информации о посте
+    # Проверка редиректа авторизованного пользователя 
+    # после отправки комментария на страницу информации о посте
     def test_add_comment_url_redirects_authorized_client_on_post_detail(self):
         """Успешная отправка комментария перенаправит
         авторизованного пользователя на подробную информацию о посте.
@@ -119,7 +119,8 @@ class PostURLTests(TestCase):
         неавторизованного пользователя на страницу входа.
         """
         post_edit_page = f'/posts/{self.post.id}/edit/'
-        redirect_login_page = reverse('users:login') + f'?next=/posts/{self.post.id}/edit/'
+        redirect_login_page = reverse(
+            'users:login') + f'?next=/posts/{self.post.id}/edit/'
         response = self.guest_client.get(post_edit_page, follow=True)
         self.assertRedirects(response, redirect_login_page)
 
@@ -130,7 +131,8 @@ class PostURLTests(TestCase):
         неавторизованного пользователя на страницу входа.
         """
         add_comment_page = f'/posts/{self.post.id}/comment/'
-        redirect_login_page = reverse('users:login') + f'?next=/posts/{self.post.id}/comment/'
+        redirect_login_page = reverse(
+            'users:login') + f'?next=/posts/{self.post.id}/comment/'
         response = self.guest_client.get(add_comment_page, follow=True)
         self.assertRedirects(response, redirect_login_page)
 
@@ -140,7 +142,7 @@ class PostURLTests(TestCase):
         """Страница с избранными авторами перенаправит
         неавторизованного пользователя на страницу входа.
         """
-        redirect_login_page = reverse('users:login') + f'?next=/follow/'
+        redirect_login_page = reverse('users:login') + '?next=/follow/'
         response = self.guest_client.get('/follow/', follow=True)
         self.assertRedirects(response, redirect_login_page)
 

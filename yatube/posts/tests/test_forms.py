@@ -116,7 +116,7 @@ class PostFormTests(TestCase):
             text='Какой-то пост',
             group=self.group,
             author=self.author
-        )        
+        )
         form_data = {
             'post': self.post,
             'text': 'ВАУ!',

@@ -38,8 +38,10 @@ def profile(request, username):
     paginator = Paginator(posts, POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    following = (request.user.is_authenticated and
-        request.user.follower.filter(author=author))
+    following = (
+        request.user.is_authenticated
+            and request.user.follower.filter(author=author)
+    )
     context = {
         'author': author,
         'page_obj': page_obj,
@@ -71,7 +73,7 @@ def post_create(request):
     }
 
     if not request.method == 'POST' or not form.is_valid():
-            return render(request, 'posts/create_post.html', context)
+        return render(request, 'posts/create_post.html', context)
 
     post = form.save(commit=False)
     post.author = request.user
@@ -140,5 +142,5 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     follow_author = get_object_or_404(User, username=username)
-    unfollow = request.user.follower.filter(author=follow_author).delete()
+    request.user.follower.filter(author=follow_author).delete()
     return redirect('posts:profile', username)

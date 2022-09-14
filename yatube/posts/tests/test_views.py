@@ -267,7 +267,7 @@ class PostPagesTests(TestCase):
         self.follow = Follow.objects.create(
             user=self.new_user,
             author=self.author
-            )
+        )
         response = self.authorized_client.get(
             reverse('posts:follow_index')
         )
@@ -275,7 +275,9 @@ class PostPagesTests(TestCase):
         self.post_exists(page_context)
 
     def test_unfollowing_posts(self):
-        """Тестирование отсутствия поста автора в ленте у нового пользователя."""
+        """Тестирование отсутствия поста автора в ленте
+        у нового пользователя.
+        """
         self.new_user = User.objects.create(username='katya')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.new_user)
@@ -329,4 +331,7 @@ class PaginatorViewsTest(TestCase):
         for url, num_of_posts in paginator_pages_url.items():
             with self.subTest(url=url):
                 response = self.post_author.get(url)
-                self.assertEqual(len(response.context['page_obj']), num_of_posts)
+                self.assertEqual(len(
+                    response.context['page_obj']
+                    ), num_of_posts
+                )

@@ -84,7 +84,7 @@ class PostURLTests(TestCase):
             f'/profile/{self.user}/follow/': HTTPStatus.FOUND,
             f'/profile/{self.user}/unfollow/': HTTPStatus.FOUND,
             f'/posts/{self.post.id}/comment/': HTTPStatus.FOUND,
-            
+
         }
         for url, expected in pages_url_status.items():
             with self.subTest(url=url):

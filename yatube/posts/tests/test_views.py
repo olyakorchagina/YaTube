@@ -332,6 +332,5 @@ class PaginatorViewsTest(TestCase):
             with self.subTest(url=url):
                 response = self.post_author.get(url)
                 self.assertEqual(len(
-                    response.context['page_obj']
-                    ), num_of_posts
+                    response.context['page_obj']), num_of_posts
                 )

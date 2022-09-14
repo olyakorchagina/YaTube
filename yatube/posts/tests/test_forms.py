@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from posts.models import Group, Post, User
+from posts.models import Comment, Group, Post, User
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -15,15 +15,8 @@ class PostFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Авторизированный пользователь
         cls.user = User.objects.create_user(username='user')
-        cls.authorized_client = Client()
-        cls.authorized_client.force_login(cls.user)
-        # Автор поста
         cls.author = User.objects.create_user(username='author')
-        cls.post_author = Client()
-        cls.post_author.force_login(cls.author)
-        # Тестовая группа
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -36,8 +29,15 @@ class PostFormTests(TestCase):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
+    def setUp(self):
+        """Создание клиента зарегистрированного пользователя и автора."""
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+        self.post_author = Client()
+        self.post_author.force_login(self.author)
+
     def test_create_post(self):
-        """Валидная форма создает запись в Post."""
+        """Валидная форма создаёт запись в Post."""
         posts_count = Post.objects.count()
         small_gif = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
@@ -62,11 +62,8 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        # Проверка: увеличилось ли число постов
         self.assertEqual(Post.objects.count(), posts_count + 1)
-
         latest_post = Post.objects.latest('id')
-        # Проверка атрибутов созданного поста
         self.assertEqual(latest_post.text, form_data['text'])
         self.assertEqual(latest_post.group.id, form_data['group'])
         self.assertEqual(latest_post.author, self.user)
@@ -108,7 +105,31 @@ class PostFormTests(TestCase):
             follow=True
         )
         edited_post = Post.objects.get(id=self.post.id)
-        # Проверка атрибутов изменённого поста
         self.assertEqual(edited_post.text, form_data['text'])
         self.assertEqual(edited_post.group.id, form_data['group'])
         self.assertEqual(edited_post.author, self.author)
+
+    def test_add_comment(self):
+        """Валидная форма создает запись в Comment."""
+        comments_count = Comment.objects.count()
+        self.post = Post.objects.create(
+            text='Какой-то пост',
+            group=self.group,
+            author=self.author
+        )        
+        form_data = {
+            'post': self.post,
+            'text': 'ВАУ!',
+            'author': self.user
+        }
+        self.authorized_client.post(
+            reverse(
+                'posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(Comment.objects.count(), comments_count + 1)
+        latest_comment = Comment.objects.latest('id')
+        self.assertEqual(latest_comment.text, form_data['text'])
+        self.assertEqual(latest_comment.author, self.user)
+        self.assertEqual(latest_comment.post, self.post)

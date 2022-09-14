@@ -9,16 +9,8 @@ class PostURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Неавторизованный пользователь
-        cls.guest_client = Client()
-        # Авторизованный пользователь
         cls.user = User.objects.create_user(username='user')
-        cls.authorized_client = Client()
-        cls.authorized_client.force_login(cls.user)
-        # Автор поста
         cls.author = User.objects.create_user(username='author')
-        cls.post_author = Client()
-        cls.post_author.force_login(cls.author)
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -30,123 +22,96 @@ class PostURLTests(TestCase):
             group=cls.group
         )
 
-    # Тестирование общедоступных страниц
-    def test_pages_url_exist_at_desired_location(self):
-        """Страницы доступны всем пользователям."""
-        pages_code = {
+    def setUp(self):
+        """Создание клиента гостя, авторизованного пользователя
+        и автора поста.
+        """
+        self.guest_client = Client()
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+        self.post_author = Client()
+        self.post_author.force_login(self.author)
+
+    def test_guest_have_access_to_public_pages_url(self):
+        """Проверка статуса страниц для неавторизованного пользователя."""
+        pages_url_status = {
+            '/unexisting_page/': HTTPStatus.NOT_FOUND,
             '/': HTTPStatus.OK,
             f'/group/{self.group.slug}/': HTTPStatus.OK,
             f'/profile/{self.author}/': HTTPStatus.OK,
             f'/posts/{self.post.id}/': HTTPStatus.OK,
-            '/unexisting_page/': HTTPStatus.NOT_FOUND
+            '/create/': HTTPStatus.FOUND,
+            f'/posts/{self.post.id}/edit/': HTTPStatus.FOUND,
+            f'/posts/{self.post.id}/comment/': HTTPStatus.FOUND,
+            '/follow/': HTTPStatus.FOUND,
+            f'/profile/{self.user}/follow/': HTTPStatus.FOUND,
+            f'/profile/{self.user}/unfollow/': HTTPStatus.FOUND
         }
-        for address, expected_value in pages_code.items():
-            with self.subTest(address=address):
-                response = self.guest_client.get(address)
-                self.assertEqual(response.status_code, expected_value)
+        for url, expected in pages_url_status.items():
+            with self.subTest(url=url):
+                response = self.guest_client.get(url)
+                self.assertEqual(response.status_code, expected)
 
-    # Тестирование страницы Новой записи для авторизованного пользователя
-    def test_create_url_exists_at_desired_location(self):
-        """Страница создания записи доступна авторизованному пользователю."""
-        response = self.authorized_client.get('/create/')
-        self.assertEqual(response.status_code, HTTPStatus.OK)
+    def test_guest_redirects_correct(self):
+        """Проверка редиректов неавторизованного пользователя."""
+        pages_url_redirect = {
+            '/create/': reverse(
+                'users:login') + '?next=/create/',
+            f'/posts/{self.post.id}/edit/': reverse(
+                'users:login') + f'?next=/posts/{self.post.id}/edit/',
+            f'/posts/{self.post.id}/comment/': reverse(
+                'users:login') + f'?next=/posts/{self.post.id}/comment/',
+            '/follow/': reverse(
+                'users:login') + '?next=/follow/',
+            f'/profile/{self.user}/follow/': reverse(
+                'users:login') + f'?next=/profile/{self.user}/follow/',
+            f'/profile/{self.user}/unfollow/': reverse(
+                'users:login') + f'?next=/profile/{self.user}/unfollow/'
+        }
+        for url, redirect_url in pages_url_redirect.items():
+            with self.subTest(url=url):
+                response = self.guest_client.get(url, follow=True)
+                self.assertRedirects(response, redirect_url)
 
-    # Тестирование комментирования записи для авторизованного пользователя
-    def test_add_comment_exists_at_desired_location(self):
-        """Комментирование записи доступно авторизованному пользователю."""
-        add_comment_page = f'/posts/{self.post.id}/comment/'
-        response = self.authorized_client.get(add_comment_page)
+    def test_authorized_have_access_to_closed_pages_url(self):
+        """"Проверка статуса страниц для авторизованного пользователя,
+        автора поста.
+        """
+        pages_url_status = {
+            '/create/': HTTPStatus.OK,
+            f'/posts/{self.post.id}/edit/': HTTPStatus.OK,
+            '/follow/': HTTPStatus.OK,
+            f'/profile/{self.user}/follow/': HTTPStatus.FOUND,
+            f'/profile/{self.user}/unfollow/': HTTPStatus.FOUND,
+            f'/posts/{self.post.id}/comment/': HTTPStatus.FOUND,
+            
+        }
+        for url, expected in pages_url_status.items():
+            with self.subTest(url=url):
+                response = self.post_author.get(url)
+                self.assertEqual(response.status_code, expected)
+
+    def test_edit_page_url_not_available_authorized_not_author(self):
+        """Страница редактирования недоступна не-автору поста."""
+        post_edit_page = f'/posts/{self.post.id}/edit/'
+        response = self.authorized_client.get(post_edit_page)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
-    # Тестирование подписки для авторизованного пользователя
-    def test_follow_exists_at_desired_location(self):
-        """Подписка доступна авторизованному пользователю."""
-        follow_page = f'/profile/{self.user}/follow/'
-        response = self.authorized_client.get(follow_page)
-        self.assertEqual(response.status_code, HTTPStatus.FOUND)
-
-    # Тестирование отписки для авторизованного пользователя
-    def test_unfollow_exists_at_desired_location(self):
-        """Отписка доступна авторизованному пользователю."""
-        unfollow_page = f'/profile/{self.user}/unfollow/'
-        response = self.authorized_client.get(unfollow_page)
-        self.assertEqual(response.status_code, HTTPStatus.FOUND)
-
-    # Тестирование страницы Редактирования поста для автора
-    def test_post_edit_url_exists_at_desired_location(self):
-        """Страница редактирования поста доступна автору."""
-        post_edit_page = f'/posts/{self.post.id}/edit/'
-        response = self.post_author.get(post_edit_page)
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    # Проверка редиректа авторизованного пользователя при попытке захода
-    # на страницу редактирования поста
-    def test_post_edit_url_redirects_authorized_client_on_post_detail(self):
-        """Страница редактирования поста перенаправит
-        авторизованного пользователя на подробную информацию о посте,
-        если тот не является его автором.
+    def test_authorized_redirects_correct(self):
+        """Проверка редиректов авторизованного пользователя,
+        не-автора поста.
         """
-        post_edit_page = f'/posts/{self.post.id}/edit/'
-        post_detail_page = f'/posts/{self.post.id}/'
-        response = self.authorized_client.get(post_edit_page, follow=True)
-        self.assertRedirects(response, post_detail_page)
+        pages_url_redirect = {
+            f'/posts/{self.post.id}/edit/': f'/posts/{self.post.id}/',
+            f'/posts/{self.post.id}/comment/': f'/posts/{self.post.id}/',
+            f'/profile/{self.user}/follow/': f'/profile/{self.user}/',
+            f'/profile/{self.user}/unfollow/': f'/profile/{self.user}/'
+        }
+        for url, redirect_url in pages_url_redirect.items():
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                self.assertRedirects(response, redirect_url)
 
-    # Проверка редиректа авторизованного пользователя
-    # после отправки комментария на страницу информации о посте
-    def test_add_comment_url_redirects_authorized_client_on_post_detail(self):
-        """Успешная отправка комментария перенаправит
-        авторизованного пользователя на подробную информацию о посте.
-        """
-        add_comment_page = f'/posts/{self.post.id}/comment/'
-        post_detail_page = f'/posts/{self.post.id}/'
-        response = self.authorized_client.get(add_comment_page, follow=True)
-        self.assertRedirects(response, post_detail_page)
-
-    # Проверка редиректа неавторизованного пользователя при попытке
-    # создать новую запись
-    def test_create_url_redirects_guest_client_on_login(self):
-        """Страница создания поста перенаправит
-        неавторизованного пользователя на страницу входа.
-        """
-        redirect_login_page = reverse('users:login') + '?next=/create/'
-        response = self.guest_client.get('/create/', follow=True)
-        self.assertRedirects(response, redirect_login_page)
-
-    # Проверка редиректа неавторизованного пользователя при попытке
-    # перехода на страницу редактирования поста
-    def test_post_edit_url_redirects_guest_client_on_login(self):
-        """Страница редактирования поста перенаправит
-        неавторизованного пользователя на страницу входа.
-        """
-        post_edit_page = f'/posts/{self.post.id}/edit/'
-        redirect_login_page = reverse(
-            'users:login') + f'?next=/posts/{self.post.id}/edit/'
-        response = self.guest_client.get(post_edit_page, follow=True)
-        self.assertRedirects(response, redirect_login_page)
-
-    # Проверка редиректа неавторизованного пользователя при попытке
-    # перехода на страницу комментирования поста
-    def test_add_comment_url_redirects_guest_client_on_login(self):
-        """Страница комментирования поста перенаправит
-        неавторизованного пользователя на страницу входа.
-        """
-        add_comment_page = f'/posts/{self.post.id}/comment/'
-        redirect_login_page = reverse(
-            'users:login') + f'?next=/posts/{self.post.id}/comment/'
-        response = self.guest_client.get(add_comment_page, follow=True)
-        self.assertRedirects(response, redirect_login_page)
-
-    # Проверка редиректа неавторизованного пользователя при попытке
-    # перехода на страницу c постами избранных авторов
-    def test_index_follow_url_redirects_guest_client_on_login(self):
-        """Страница с избранными авторами перенаправит
-        неавторизованного пользователя на страницу входа.
-        """
-        redirect_login_page = reverse('users:login') + '?next=/follow/'
-        response = self.guest_client.get('/follow/', follow=True)
-        self.assertRedirects(response, redirect_login_page)
-
-    # Проверка вызываемых шаблонов для каждого адреса
     def test_urls_use_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
         templates_url_names = {

@@ -38,9 +38,8 @@ def profile(request, username):
     paginator = Paginator(posts, POSTS_ON_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    following = False
-    if request.user.is_authenticated:
-        following = request.user.follower.filter(author=author).exists()
+    following = (request.user.is_authenticated and
+        request.user.follower.filter(author=author))
     context = {
         'author': author,
         'page_obj': page_obj,
@@ -71,10 +70,8 @@ def post_create(request):
         'form': form
     }
 
-    if not request.method == 'POST':
-        return render(request, 'posts/create_post.html', context)
-    if not form.is_valid():
-        return render(request, 'posts/create_post.html', context)
+    if not request.method == 'POST' or not form.is_valid():
+            return render(request, 'posts/create_post.html', context)
 
     post = form.save(commit=False)
     post.author = request.user
@@ -98,9 +95,7 @@ def post_edit(request, post_id):
         'is_edit': True,
     }
 
-    if not request.method == 'POST':
-        return render(request, 'posts/create_post.html', context)
-    if not form.is_valid():
+    if not request.method == 'POST' or not form.is_valid():
         return render(request, 'posts/create_post.html', context)
 
     form.save()
@@ -134,10 +129,8 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     follow_author = get_object_or_404(User, username=username)
-    if follow_author != request.user and (
-        not request.user.follower.filter(author=follow_author).exists()
-    ):
-        Follow.objects.create(
+    if follow_author != request.user:
+        Follow.objects.get_or_create(
             user=request.user,
             author=follow_author
         )
@@ -147,7 +140,5 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     follow_author = get_object_or_404(User, username=username)
-    follow = request.user.follower.filter(author=follow_author)
-    if follow.exists():
-        follow.delete()
+    unfollow = request.user.follower.filter(author=follow_author).delete()
     return redirect('posts:profile', username)

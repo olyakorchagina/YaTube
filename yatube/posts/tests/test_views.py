@@ -77,7 +77,7 @@ class PostPagesTests(TestCase):
         """
         page_obj = page_context.get('page_obj')
         self.assertIsNotNone(page_obj)
-        first_object = page_context['page_obj'][0]
+        first_object = page_obj[0]
         self.assertIn(first_object, page_obj)
         self.assertEqual(first_object.author.username, self.author.username)
         self.assertEqual(first_object.text, self.post.text)
@@ -246,12 +246,10 @@ class PostPagesTests(TestCase):
     def test_unfollow(self):
         """Тестирование: отписка от автора удаляет запись из БД."""
         count_follow = Follow.objects.count()
-        self.authorized_client.get(
-            reverse(
-                'posts:profile_follow',
-                kwargs={'username': self.author.username})
+        self.follow = Follow.objects.create(
+            user=self.user,
+            author=self.author
         )
-        self.assertEqual(Follow.objects.count(), count_follow + 1)
         self.authorized_client.get(
             reverse(
                 'posts:profile_unfollow',
@@ -312,25 +310,23 @@ class PaginatorViewsTest(TestCase):
 
     def test_pages_contain_correct_records(self):
         """Проверка количества постов на первой и второй страницах."""
-        paginator_pages_url = {
-            reverse('posts:index'): POSTS_ON_PAGE,
-            reverse('posts:index') + '?page=2': POSTS_ON_SECOND_PAGE,
+        paginator_pages_url = [
+            reverse('posts:index'),
             reverse(
                 'posts:group_list', kwargs={'slug': self.group.slug}
-            ): POSTS_ON_PAGE,
-            reverse(
-                'posts:group_list', kwargs={'slug': self.group.slug}
-            ) + '?page=2': POSTS_ON_SECOND_PAGE,
+            ),
             reverse(
                 'posts:profile', kwargs={'username': self.author.username}
-            ): POSTS_ON_PAGE,
-            reverse(
-                'posts:profile', kwargs={'username': self.author.username}
-            ) + '?page=2': POSTS_ON_SECOND_PAGE,
-        }
-        for url, num_of_posts in paginator_pages_url.items():
-            with self.subTest(url=url):
-                response = self.post_author.get(url)
-                self.assertEqual(len(
-                    response.context['page_obj']), num_of_posts
-                )
+            )
+        ]
+        page_posts = [
+            (1, 10),
+            (2, 3)
+        ]
+        for url in paginator_pages_url:
+            for num_page, num_of_posts in page_posts:
+                with self.subTest(url=url):
+                    response = self.post_author.get(f'{url}?page={num_page}')
+                    self.assertEqual(len(
+                        response.context['page_obj']), num_of_posts
+                    )
